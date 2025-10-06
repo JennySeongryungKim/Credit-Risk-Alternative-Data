@@ -1,0 +1,197 @@
+<h1>Data Preprocessing (Windowizing + SMOTE) Pipeline</h1>
+
+<p><strong>TL;DR</strong></p>
+<ul>
+  <li><strong>Feature engineering</strong> → <strong>Windowizing (Yeo-Johnson)</strong> → <strong>Encoding</strong> → <strong>Train/Val split</strong> → <strong>Scaling</strong> → <strong>SMOTE (0.5)</strong> → <strong>Save artifacts</strong></li>
+  <li>Artifacts: <code>preprocessed_data.pkl</code> (X/y folds, scalers), <code>preprocessor.pkl</code> (encoders/transformers/feature lists)</li>
+</ul>
+
+<hr/>
+
+<h2>1) What this does</h2>
+
+<ul>
+  <li>Merge multiple sources by <strong>SK_ID_CURR</strong> (<code>application</code>, <code>bureau</code>, <code>previous_application</code>, <code>credit_card_balance</code>, <code>pos_cash_balance</code>, <code>installments_payments</code>).</li>
+  <li>Create <strong>engineered features</strong> (credit/income &amp; annuity ratios, age/employment years, EXT_SOURCE stats).</li>
+  <li><strong>Windowizing</strong>: apply Yeo-Johnson to highly skewed numeric columns (<code>threshold=0.5</code>, no standardization inside the transformer).</li>
+  <li><strong>Categoricals</strong>: binary → <code>LabelEncoder</code>; otherwise Top-5 one-hot.</li>
+  <li>Split features into <strong>alternative</strong> vs <strong>traditional</strong> via keyword rules.</li>
+  <li><strong>Stratified</strong> train/val = <strong>80/20</strong>, <code>random_state=42</code>.</li>
+  <li><strong>Standardize</strong> per feature set (<em>all / traditional / alternative</em>).</li>
+  <li><strong>SMOTE(0.5)</strong> to mitigate imbalance with memory-friendly oversampling.</li>
+  <li>Persist ready-to-train arrays + scalers and the preprocessor object.</li>
+</ul>
+
+<hr/>
+
+<h2>2) Inputs</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Key in <code>data_paths</code></th>
+      <th>Expected file</th>
+      <th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>application</code></td>
+      <td>CSV</td>
+      <td>Required. Detects <code>TARGET</code> automatically if present.</td>
+    </tr>
+    <tr>
+      <td><code>bureau</code></td>
+      <td>CSV</td>
+      <td>Optional. Aggregated and merged with <code>bureau_balance</code> if provided.</td>
+    </tr>
+    <tr>
+      <td><code>bureau_balance</code></td>
+      <td>CSV</td>
+      <td>Optional. Aggregations by <code>SK_ID_BUREAU</code>: min/max/mean/status-0 count.</td>
+    </tr>
+    <tr>
+      <td><code>previous_application</code></td>
+      <td>CSV</td>
+      <td>Optional. Numeric mean/max/min by <code>SK_ID_CURR</code>.</td>
+    </tr>
+    <tr>
+      <td><code>credit_card_balance</code></td>
+      <td>CSV</td>
+      <td>Optional. Numeric mean/max/min by <code>SK_ID_CURR</code>.</td>
+    </tr>
+    <tr>
+      <td><code>pos_cash_balance</code></td>
+      <td>CSV</td>
+      <td>Optional. Numeric mean/max/min by <code>SK_ID_CURR</code>.</td>
+    </tr>
+    <tr>
+      <td><code>installments_payments</code></td>
+      <td>CSV</td>
+      <td>Optional. Creates <code>PAYMENT_DIFF</code>, <code>PAYMENT_RATIO</code>, then aggregates.</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr/>
+
+<h2>3) Feature Engineering</h2>
+
+<ul>
+  <li><strong>Credit/Income ratio</strong>: <code>CREDIT_INCOME_RATIO = AMT_CREDIT / (AMT_INCOME_TOTAL + 1)</code></li>
+  <li><strong>Annuity/Income ratio</strong>: <code>ANNUITY_INCOME_RATIO = AMT_ANNUITY / (AMT_INCOME_TOTAL + 1)</code></li>
+  <li><strong>Credit/Goods ratio</strong>: <code>CREDIT_GOODS_RATIO = AMT_CREDIT / (AMT_GOODS_PRICE + 1)</code></li>
+  <li><strong>Age/Employment</strong>: <code>AGE_YEARS = -DAYS_BIRTH/365.25</code>, <code>EMPLOYMENT_YEARS = clip(-DAYS_EMPLOYED/365.25, 0, ∞)</code></li>
+  <li><strong>External sources</strong>: <code>EXT_SOURCE_{MEAN,STD,MIN,MAX}</code> (for available columns)</li>
+</ul>
+
+<p><strong>Alternative vs Traditional (keyword rules)</strong></p>
+<ul>
+  <li><strong>Alternative</strong>: <code>FLAG_</code>, <code>EXT_SOURCE</code>, <code>REGION_</code>, <code>OBS_</code>, <code>DEF_</code>, <code>EMAIL</code>, <code>PHONE</code>, <code>MOBIL</code>, <code>SOCIAL</code></li>
+  <li><strong>Traditional</strong>: <code>AMT_</code>, <code>DAYS_</code>, <code>CNT_</code>, <code>CREDIT</code>, <code>INCOME</code>, <code>BUREAU_</code>, <code>PREV_</code>, <code>ANNUITY</code></li>
+</ul>
+
+<hr/>
+
+<h2>4) Windowizing (Yeo-Johnson)</h2>
+
+<ul>
+  <li><strong>Targets</strong>: broad <code>AMT_*</code> columns + large-scale continuous vars (<code>AMT_CREDIT</code>, <code>AMT_INCOME_TOTAL</code>, <code>AMT_GOODS_PRICE</code>, <code>AMT_ANNUITY</code>, <code>DAYS_EMPLOYED</code>, key ratios).</li>
+  <li><strong>Criterion</strong>: <code>|skewness| &gt; 0.5</code> → <code>PowerTransformer(method="yeo-johnson", standardize=False)</code>.</li>
+  <li>Store fitted transformers in <code>self.power_transformers[col]</code> for test-time application.</li>
+</ul>
+
+<hr/>
+
+<h2>5) Encoding</h2>
+
+<ul>
+  <li><strong>Binary</strong> (≤2 unique): <code>LabelEncoder</code> → keep encoder in <code>self.label_encoders[col]</code>.</li>
+  <li><strong>Multi-class</strong>: One-hot for top-5 categories only (<code>col_&lt;cat&gt;</code>), drop original column.</li>
+</ul>
+
+<hr/>
+
+<h2>6) Splitting, Scaling, SMOTE</h2>
+
+<ul>
+  <li><strong>Split</strong>: <code>train_test_split(..., test_size=0.2, stratify=y, random_state=42)</code></li>
+  <li><strong>Scaling</strong>: fit/apply <code>StandardScaler</code> per feature set (<em>all / traditional / alternative</em>).</li>
+  <li><strong>SMOTE</strong>: <code>sampling_strategy=0.5</code> (positives ≈ 0.5 × negatives) to save memory.</li>
+</ul>
+
+<hr/>
+
+<h2>7) Outputs (Artifacts)</h2>
+
+<ul>
+  <li><code>preprocessed_data.pkl</code>
+    <ul>
+      <li>For each key (<code>all</code>, <code>traditional</code>, <code>alternative</code>):</li>
+      <li><code>X_train</code>, <code>X_val</code> (scaled numpy arrays / some balanced)</li>
+      <li><code>y_train</code>, <code>y_val</code></li>
+      <li><code>features</code> (column names)</li>
+      <li><code>scaler</code> (<code>StandardScaler</code>)</li>
+    </ul>
+  </li>
+  <li><code>preprocessor.pkl</code>
+    <ul>
+      <li><code>DataPreprocessor</code> instance (label encoders, YJ transformers map, feature splits, etc.)</li>
+    </ul>
+  </li>
+</ul>
+
+<hr/>
+
+<h2>8) How to run</h2>
+
+<pre><code class="language-python">from data_preprocessor import DataPreprocessor
+
+train_paths = {
+    "application": "data/application_train.csv",
+    "bureau": "data/bureau.csv",
+    "bureau_balance": "data/bureau_balance.csv",
+    "previous_application": "data/previous_application.csv",
+    "credit_card_balance": "data/credit_card_balance.csv",
+    "pos_cash_balance": "data/pos_cash_balance.csv",
+    "installments_payments": "data/installments_payments.csv",
+}
+
+pre = DataPreprocessor()
+datasets = pre.preprocess_and_save(train_paths)
+# → artifacts: preprocessed_data.pkl, preprocessor.pkl
+</code></pre>
+
+<hr/>
+
+<h2>9) Inference tips</h2>
+
+<ul>
+  <li>For serving/inference: load <code>preprocessor.pkl</code> and apply the exact same windowizing + encoding + scaling pipeline.</li>
+  <li>Columns missing in new data are skipped safely, but to align matrix shapes, re-order by the saved <code>features</code> list before prediction.</li>
+</ul>
+
+<hr/>
+
+<h2>10) Requirements</h2>
+
+<ul>
+  <li><code>pandas&gt;=2.0.0</code>, <code>numpy&gt;=1.24.0</code>, <code>scikit-learn&gt;=1.3.0</code>, <code>imbalanced-learn&gt;=0.11.0</code>,</li>
+  <li><code>lightgbm&gt;=4.0.0</code>, <code>matplotlib&gt;=3.7.0</code>, <code>seaborn&gt;=0.12.0</code>, <code>joblib&gt;=1.3.0</code></li>
+  <li>(Optional) <code>scipy&gt;=1.11.0</code>, <code>pandas[performance]&gt;=2.0.0</code></li>
+</ul>
+
+<blockquote>
+  Install: <code>pip install -r requirements.txt</code>
+</blockquote>
+
+<hr/>
+
+<h2>11) Reproducibility &amp; Notes</h2>
+
+<ul>
+  <li>Use <code>random_state=42</code>, <code>stratify=y</code> for reproducible splits.</li>
+  <li>Replace <code>±inf</code> with <code>NaN</code>, then fill with <code>0</code>: <code>replace([np.inf, -np.inf], np.nan).fillna(0)</code>.</li>
+  <li>For very large data, consider dimensionality reduction (e.g., PCA) <em>before</em> SMOTE, or adjust the sampling strategy.</li>
+</ul>
+
