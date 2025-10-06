@@ -152,11 +152,11 @@ data_paths = {
 
 **Feature Classification Rules**:
 
-- **Alternative Features** (대안적 특성):
+- **Alternative Features**:
   - **Keywords**: `FLAG_`, `EXT_SOURCE`, `REGION_`, `OBS_`, `DEF_`, `EMAIL`, `PHONE`, `MOBIL`, `SOCIAL`
   - **Characteristics**: Behavioral, demographic, and external indicator features
 
-- **Traditional Features** (전통적 특성):
+- **Traditional Features**:
   - **Keywords**: `AMT_`, `DAYS_`, `CNT_`, `CREDIT`, `INCOME`, `BUREAU_`, `PREV_`, `ANNUITY`
   - **Characteristics**: Financial amounts, time-based features, and credit history features
 
