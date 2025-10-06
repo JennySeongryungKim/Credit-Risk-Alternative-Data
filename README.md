@@ -1,2 +1,2 @@
 # Credit-Risk-Alternative-Data
-An analysis was conducted on eleven ML/DL models using both traditional and alternative credit data for the purpose of predicting loan defaults. The models used windowized features and SMOTE to optimize the acceptance rate at a 5% bad rate. TabNet and Wide&Deep were used to evaluate the feasibility of financial inclusion for borrowers without credit.
+Using windowed features and SMOTE, eleven ML/DL models were evaluated on alternative vs. traditional credit data to predict loan defaults; TabNet, Wide&Deep, and other traditional ML models evaluated financial inclusion for borrowers without credit; and the optimization of the acceptance rate was achieved at a bad rate of 5%.
