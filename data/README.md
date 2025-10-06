@@ -31,6 +31,8 @@ application_{train|test}.csv  (Main table)
 
 </h3><b>Table Descriptions</b></h3>
 
+</br>
+
 </b>1. application_{train|test}.csv (Main Table)</b>
 
 1. <b>Purpose:</b> Primary loan application data with client information
