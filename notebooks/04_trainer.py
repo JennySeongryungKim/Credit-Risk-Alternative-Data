@@ -16,8 +16,102 @@ from src.pipeline.custom_models import (
 from src.utils.paths import model_path, artifact_path
 
 class SequentialModelTrainer:
-    """Train models one by one with user selection"""
+    """
+    Sequential trainer for credit-risk models with interactive/non-interactive
+    selection, unified training loop across feature sets, AUC & approval@fixed
+    bad-rate metrics, thin-file evaluation hooks, and result persistence.
 
+    This class exposes a clean interface to:
+      (1) enumerate all supported models (linear, tree-based, deep, etc.),
+      (2) select a subset to run (prompt or programmatic),
+      (3) fit each model across every provided feature set (e.g., 'traditional',
+          'alternative', 'all'),
+      (4) evaluate ROC-AUC and Acceptance Rate at a fixed bad-rate constraint,
+      (5) compare feature sets per model, and
+      (6) save per-run artifacts (fitted estimators, CSV of results).
+
+    Attributes
+    ----------
+    results : list[dict]
+        In-memory ledger of per-(model, feature_set) outcomes with fields:
+        ['model_name','feature_set','auc_score','acceptance_rate','threshold',
+         'actual_bad_rate','n_features','model'].
+    all_models : dict[str, sklearn-like estimator]
+        Registry of all available models (11 total). Keys mirror the menu
+        names used by `select_models()`:
+          1. Linear_Regression (wrapper as classifier)
+          2. Logistic_Regression
+          3. Decision_Tree
+          4. Random_Forest
+          5. Gradient_Boosting
+          6. LightGBM
+          7. Extra_Trees
+          8. TabNet
+          9. Wide_Deep
+          10. MLP
+          11. SVM (SGDClassifier with log_loss)
+
+    Methods
+    -------
+    get_all_models():
+        Build and return the full model registry (11 models).
+    select_models(selection: Optional[str] = None) -> dict[str, estimator]:
+        Show a numbered menu and return the chosen subset. Supports:
+        '0' (all), '99' (quick trio: LightGBM, Random_Forest, Logistic_Regression),
+        '88' (deep-only), '77' (traditional ML only), or a comma list ('1,3,5').
+        If `selection` is None, falls back to env var MODEL_SELECTION or prompts.
+    calculate_acceptance_rate(y_true, y_pred_proba, target_bad_rate=0.05) -> dict:
+        Compute Acceptance Rate @ Fixed Bad Rate. Sort applicants by predicted
+        default probability ascending and find the largest approval cutoff whose
+        realized bad rate ≤ target. Returns acceptance_rate, threshold, and
+        actual_bad_rate.
+    train_single_model(model_name, model, datasets) -> list[dict]:
+        Fit one model across all feature sets in `datasets`. Computes AUC and
+        approval metrics on each validation fold, persists fitted estimators to
+        disk (`models/{model_name}_{feature_set}_model.pkl`), updates `results`,
+        prints a brief feature-set comparison, and returns a list of result rows.
+    analyze_thin_file_customers(datasets, model_results) -> list[dict]:
+        (Hook) Evaluate thin-file vs regular segments per feature set using
+        the already-fitted models in `model_results`. Writes
+        'thin_file_analysis_by_features.csv' and logs best configuration.
+    compare_feature_sets(model_results) -> None:
+        Print Alternative vs Traditional deltas (AUC / acceptance) for the
+        given model’s per-feature-set results.
+    save_results() -> pandas.DataFrame:
+        Persist the in-memory `results` ledger to 'model_results.csv' and return
+        the DataFrame.
+
+    Inputs / Data Contract
+    ----------------------
+    datasets : dict[str, dict]
+        A mapping of feature-set name → split dict. Each split dict MUST contain:
+          - 'X_train', 'y_train', 'X_val', 'y_val' (numpy arrays or array-likes)
+          - 'features' (list/array of feature names, used by thin-file heuristics)
+
+    Persistence & Artifacts
+    -----------------------
+    - Per-(model, feature_set) estimator: 'models/{model}_{feature_set}_model.pkl' (joblib)
+    - Aggregated run results CSV: 'model_results.csv'
+    - Thin-file analysis CSV: 'thin_file_analysis_by_features.csv'
+
+    Notes
+    -----
+    - SVM menu item uses SGDClassifier with `loss='log_loss'` to yield probabilities.
+    - Acceptance-rate routine enforces a ≤ target bad-rate constraint; if none is
+      feasible, it falls back to a conservative 10% approval heuristic.
+    - `analyze_thin_file_customers` includes pragmatic thin-file proxies; replace
+      with your domain definition as needed.
+
+    Example
+    -------
+    >>> trainer = SequentialModelTrainer()
+    >>> selected = trainer.select_models(selection='99')   # quick trio
+    >>> results = []
+    >>> for name, model in selected.items():
+    ...     results += trainer.train_single_model(name, model, datasets)
+    >>> df = trainer.save_results()
+    >>> print(df.sort_values('auc_score', ascending=False).head())
+    """
     def __init__(self):
         self.results = []
         self.all_models = self.get_all_models()
