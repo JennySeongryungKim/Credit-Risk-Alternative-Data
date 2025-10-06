@@ -1,9 +1,3 @@
-좋아요 👍
-GitHub 노트북에서 강조 효과(크고 굵은 제목)를 **HTML `<h2>`, `<h3>`, `<b>` 태그 조합**으로 통일한 버전을 아래에 정리했어요.
-GitHub, Colab, VSCode 전부에서 안정적으로 렌더링됩니다👇
-
----
-
 </h2><b>Overview</b></h2>
 
 This project uses the <b>Home Credit Default Risk</b> dataset, which contains loan application data and various behavioral/historical information about clients.
