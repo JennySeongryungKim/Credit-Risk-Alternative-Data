@@ -12,26 +12,26 @@ This document summarizes the EDA outcomes produced by `01_EDA.py`, aligned with 
 - **TARGET distribution**: {0: 282686, 1: 24825}
 
 Artifacts:
-- Target distribution plot: `eda_output/target_distribution.png`
-- Missingness bar plot (top features): `eda_output/missing_top.png`
+- Target distribution plot: `artifact/EDA_output/target_distribution.png`
+- Missingness bar plot (top features): `artifact/EDA_output/missing_top.png`
 
 ---
 
 ### STEP B. Numeric Features: Distributions, Skewness, Correlation
 - **Top |skew|**: {"FLAG_MOBIL": 554.5367435977538, "BUREAU_AMT_CREDIT_MAX_OVERDUE_min": 444.59610411462734, "PREV_SELLERPLACE_AREA_min": 411.08801561455346, "INST_PAYMENT_RATIO_min": 394.48647187930544, "FLAG_DOCUMENT_12": 392.11477910204303, "AMT_INCOME_TOTAL": 391.5596541041876}
-- **VIF (multicollinearity check)**: saved to `eda_output/vif.csv`
+- **VIF (multicollinearity check)**: saved to `artifact/EDA_output/vif.csv`
 
 Artifacts:
-- Correlation heatmap (top by |corr with TARGET|): `eda_output/corr_heatmap.png`
-- KDE/Hist per top-skewed numeric features: `eda_output/kde_*.png` / `eda_output/hist_*.png`
+- Correlation heatmap (top by |corr with TARGET|): `artifact/EDA_output/corr_heatmap.png`
+- KDE/Hist per top-skewed numeric features: `artifact/EDA_output/kde_*.png` / `artifact/EDA_output/hist_*.png`
 
 ---
 
 ### STEP C. Categorical Features: Distributions & Relationship to Target
-- **Cramér’s V table**: saved to `eda_output/cramers_v.csv`
+- **Cramér’s V table**: saved to `artifact/EDA_output/cramers_v.csv`
 
 Artifacts:
-- Top-K frequency with bad-rate overlays per categorical feature: `eda_output/cat_*.png`
+- Top-K frequency with bad-rate overlays per categorical feature: `artifact/EDA_output/cat_*.png`
 
 ---
 
@@ -39,12 +39,12 @@ Artifacts:
 - Plots show reduced skewness and stabilized distributions after Yeo–Johnson.
 
 Artifacts:
-- Before/After histograms for selected skewed features: `eda_output/windowizing_*.png`
+- Before/After histograms for selected skewed features: `artifact/EDA_output/windowizing_*.png`
 
 ---
 
 ### STEP E. Categorical Encoding Strategy Justification
-- **Cardinality/coverage report**: `eda_output/categorical_cardinality.csv`
+- **Cardinality/coverage report**: `artifact/EDA_output/categorical_cardinality.csv`
 - **Rule**:
   - If `nunique ≤ 2` → LabelEncoder (binary)
   - Else → Top-5 one-hot encoding to reduce sparsity and memory
@@ -56,7 +56,7 @@ Notes:
 ---
 
 ### STEP F. Feature Rationale Summary
-- **Feature explanations**: saved to `eda_output/feature_explanations.csv` (total documented: 334)
+- **Feature explanations**: saved to `artifact/EDA_output/feature_explanations.csv` (total documented: 334)
 
 Notes:
 - Rationale uses rule-based mapping consistent with naming patterns (e.g., `BUREAU_`, `PREV_`, `INST_`, ratios, temporal features).
