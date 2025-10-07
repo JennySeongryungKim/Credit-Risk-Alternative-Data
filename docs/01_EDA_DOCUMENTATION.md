@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document summarizes the EDA outcomes produced by `01_eda.py`, aligned with the pipeline’s stepwise structure (A–H). Results and file artifacts reflect your provided run outputs. Transformations (Yeo–Johnson windowizing), categorical encoding strategy, and SMOTE guidelines match the code in `01_EDA.py`.
+This document summarizes the EDA outcomes produced by `01_EDA.py`, aligned with the pipeline’s stepwise structure (A–H). Results and file artifacts reflect your provided run outputs. Transformations (Yeo–Johnson windowizing), categorical encoding strategy, and SMOTE guidelines match the code in `01_EDA.py`.
 
 ---
 
