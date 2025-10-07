@@ -34,8 +34,8 @@ PREPROCESSOR_PKL = os.path.join(DATA_DIR, "preprocessor.pkl")
 # 🔹 Artifact files
 # ----------------------------------------------------------------------------
 MODEL_RESULTS_CSV = os.path.join(ARTIFACT_DIR, "01_Model_results.csv")
-MODEL_COMPARISON_PNG = os.path.join(ARTIFACT_DIR, "model_comparison.png")
-THIN_FILE_ANALYSIS_PNG = os.path.join(ARTIFACT_DIR, "thin_file_analysis.png")
+MODEL_COMPARISON_PNG = os.path.join(ARTIFACT_DIR, "02_model_comparison.png")
+THIN_FILE_ANALYSIS_PNG = os.path.join(ARTIFACT_DIR, "03_thin_file_analysis.png")
 
 # ----------------------------------------------------------------------------
 # 🔹 Directory verification
