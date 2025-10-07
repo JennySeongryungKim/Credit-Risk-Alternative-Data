@@ -1,4 +1,4 @@
-# 01_eda.py — Exploratory Data Analysis Documentation
+# 01_EDA.py — Exploratory Data Analysis Documentation
 
 ## Overview
 
